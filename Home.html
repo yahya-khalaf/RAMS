@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Registration</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to bottom, #007BFF, #ADD8E6);
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .event-logo {
+            max-width: 100px;
+            margin-bottom: 10px;
+        }
+        .event-details p {
+            margin: 5px 0;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        input, select {
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            margin-top: 15px;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #register-btn {
+            background-color: #007BFF;
+            color: white;
+        }
+        #quit-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <img src="event-logo.png" alt="Event Logo" class="event-logo">
+            <h1>Event Registration</h1>
+        </header>
+        <form id="registration-form">
+            <label for="first-name">First Name:</label>
+            <input type="text" id="first-name" required>
+
+            <label for="last-name">Last Name:</label>
+            <input type="text" id="last-name" required>
+
+            <label for="email">Email:</label>
+            <input type="email" id="email" required>
+
+            <button type="submit" id="register-btn">Register</button>
+        </form>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("registration-form");
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const firstName = document.getElementById("first-name").value;
+        const lastName = document.getElementById("last-name").value;
+        const email = document.getElementById("email").value;
+
+        const response = await fetch("https://script.google.com/macros/s/AKfycbwIx0nRdGrkkcAu28D8pU0VOuaOS5wKR6BZz21cju4/dev", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ firstName, lastName, email })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert(`Registration successful! Your Serial Number: ${result.serial}`);
+            window.location.href = "confirmation.html";
+        } else {
+            alert("Registration failed. Email not found in the system.");
+        }
+    });
+});
+
+    </script>
+    
+</body>
+</html>

@@ -93,7 +93,7 @@
         const lastName = document.getElementById("last-name").value;
         const email = document.getElementById("email").value;
 
-        const response = await fetch("https://script.google.com/macros/s/AKfycbxKl0KxWbphpL3bL8mZZqlu6BseDV-WvUVKGuOzNR2FQEXKgpmjB9ehxxn-LEyrykXI/exec", {
+        const response = await fetch("https://script.google.com/macros/s/AKfycbwRqCyxi65jmxf6P4f0VOdEAM2AdH324fEYv44zS0dDd2fHno0wioKBP6cnuwEKl-3J/exec", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ firstName, lastName, email })

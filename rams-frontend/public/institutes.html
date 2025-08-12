@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم المعاهد</title>
+
+    <!-- React and Babel for JSX in browser -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- QR Code Library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
+
+
+    <!-- Google Fonts for branding -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cardo:wght@700&family=Cairo:wght@400;600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        .font-cardo {
+            font-family: 'Cardo', serif;
+        }
+
+        .font-cairo {
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background-color: #1b2a39;
+        }
+
+        .loader {
+            border-top-color: #15a9b2;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-[#1b2a39]" style="direction: rtl; text-align: right;">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        const MenuIcon = (props) => (
+            <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+        );
+
+        const App = () => {
+            const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+            const [institutes, setInstitutes] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [selectedInstitutes, setSelectedInstitutes] = useState([]);
+            const [isDownloading, setIsDownloading] = useState(false);
+            const [showAddInstituteModal, setShowAddInstituteModal] = useState(false);
+
+            const [filters, setFilters] = useState({
+                priority: 'all',
+                isVip: 'all',
+                search: ''
+            });
+            const [apiBaseUrl] = useState('http://localhost:3000');
+
+            const fetchInstitutes = async () => {
+                setLoading(true);
+                setError(null);
+                try {
+                    const apiUrl = `${apiBaseUrl}/api/institutes`;
+                    const response = await fetch(apiUrl);
+
+                    if (!response.ok) {
+                        throw new Error('فشل جلب البيانات من الخادم.');
+                    }
+
+                    const result = await response.json();
+
+                    if (result.status === 'SUCCESS') {
+                        setInstitutes(result.data);
+                    } else {
+                        throw new Error(result.message || 'فشل جلب البيانات.');
+                    }
+                } catch (err) {
+                    setError('فشل الاتصال بالخادم. يرجى التأكد من تشغيل الخادم بشكل صحيح.');
+                    console.error('Error fetching data:', err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            useEffect(() => {
+                fetchInstitutes();
+            }, [showAddInstituteModal]);
+
+            const handleDownloadQrCode = (institute) => {
+                if (!institute.registration_token) {
+                    alert('لا يمكن تنزيل رمز QR، لا يوجد توكن تسجيل.');
+                    return;
+                }
+            
+                const registrationUrl = `${window.location.origin}/custom-register?token=${institute.registration_token}`;
+            
+                // Use the qrcode library to generate a data URL with increased size
+                QRCode.toDataURL(registrationUrl, { errorCorrectionLevel: 'H', width: 500, height: 500 }, function (err, url) {
+                    if (err) {
+                        console.error('Error generating QR code:', err);
+                        return;
+                    }
+                    
+                    // Create a temporary link element to trigger the download
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `${institute.institute_name}_QR.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
+            };
+
+            const handleDownloadSelectedQrCodes = () => {
+                setIsDownloading(true);
+                const institutesToDownload = institutes.filter(institute => selectedInstitutes.includes(institute.institute_id));
+                
+                institutesToDownload.forEach((institute, index) => {
+                    // Slight delay to prevent browser from blocking multiple downloads
+                    setTimeout(() => {
+                        handleDownloadQrCode(institute);
+                    }, index * 500); 
+                });
+
+                setTimeout(() => {
+                    setIsDownloading(false);
+                    setSelectedInstitutes([]);
+                }, institutesToDownload.length * 500 + 1000);
+            };
+
+            const handleFilterChange = (e) => {
+                const { name, value } = e.target;
+                setFilters(prev => ({ ...prev, [name]: value }));
+            };
+
+            const handleSearchChange = (e) => {
+                const { value } = e.target;
+                setFilters(prev => ({ ...prev, search: value }));
+            };
+            
+            const handleTableInstituteSelect = (id) => {
+                setSelectedInstitutes(prev => {
+                    if (prev.includes(id)) {
+                        return prev.filter(instituteId => instituteId !== id);
+                    } else {
+                        return [...prev, id];
+                    }
+                });
+            };
+            
+            const handleSelectAll = () => {
+                if (selectedInstitutes.length === filteredInstitutes.length) {
+                    setSelectedInstitutes([]);
+                } else {
+                    const allInstituteIds = filteredInstitutes.map(i => i.institute_id);
+                    setSelectedInstitutes(allInstituteIds);
+                }
+            };
+
+            const filteredInstitutes = useMemo(() => {
+                return institutes.filter(institute => {
+                    const searchTerm = filters.search ? filters.search.toLowerCase() : '';
+                    const instituteName = institute.institute_name ? institute.institute_name.toLowerCase() : '';
+
+                    const matchesSearch = instituteName.includes(searchTerm);
+
+                    const matchesPriority = filters.priority === 'all' || institute.institute_priority === filters.priority;
+                    
+                    const matchesVip = filters.isVip === 'all' || (filters.isVip === 'vip' && institute.is_vip) || (filters.isVip === 'not-vip' && !institute.is_vip);
+
+                    return matchesSearch && matchesPriority && matchesVip;
+                });
+            }, [institutes, filters]);
+
+            const Badge = ({ text, color }) => {
+                const baseClasses = "px-3 py-1 text-xs font-semibold rounded-full inline-block font-cairo";
+                return <span className={`${baseClasses} ${color}`}>{text}</span>;
+            };
+
+            const Sidebar = () => (
+                <aside className={`fixed top-0 right-0 h-full bg-[#f1f2f2] text-[#1b2a39] w-64 p-6 transition-transform transform ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'} md:translate-x-0 md:relative md:flex-shrink-0 z-20`}>
+                    <div className="flex justify-center mb-10 bg-white rounded-xl">
+                        <img src="images/ICCD-Logo-01.png" alt="ICCD Logo" className="h-auto object-contain p-4" />
+                    </div>
+                    <nav className="font-cairo space-y-2">
+                        <a href="/dashboard" className="flex items-center p-3 hover:bg-gray-200 rounded-lg">لوحة التحكم</a>
+                        <a href="/institutes" className="flex items-center p-3 bg-[#15a9b2] text-white rounded-lg">قائمة المعاهد</a>
+                    </nav>
+                </aside>
+            );
+
+            // NEW: Modal component for adding an institute
+            const AddInstituteModal = ({ onClose, onInstituteAdded }) => {
+                const [formData, setFormData] = useState({
+                    instituteName: '',
+                    instituteType: '',
+                    institutePriority: 'low',
+                    isVip: false
+                });
+                const [loading, setLoading] = useState(false);
+                const [message, setMessage] = useState({ text: '', type: '' });
+                const [showModal, setShowModal] = useState(false);
+
+                const handleChange = (e) => {
+                    const { name, value, type, checked } = e.target;
+                    setFormData(prev => ({
+                        ...prev,
+                        [name]: type === 'checkbox' ? checked : value
+                    }));
+                };
+
+                const showCustomModal = (title, msg, type) => {
+                    setMessage({ text: msg, type });
+                    setShowModal(true);
+                };
+
+                const closeModal = () => {
+                    setShowModal(false);
+                    setMessage({ text: '', type: '' });
+                    if (message.type === 'success') {
+                        onInstituteAdded();
+                        onClose();
+                    }
+                };
+                
+                const handleSubmit = async (e) => {
+                    e.preventDefault();
+                    setLoading(true);
+
+                    if (!formData.instituteName) {
+                        showCustomModal('خطأ', 'الرجاء إدخال اسم المعهد.', 'error');
+                        setLoading(false);
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`${apiBaseUrl}/api/institutes`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(formData)
+                        });
+
+                        const result = await response.json();
+
+                        if (response.status === 201) {
+                            showCustomModal('تم بنجاح', 'تمت إضافة المعهد بنجاح.', 'success');
+                            setFormData({
+                                instituteName: '',
+                                instituteType: '',
+                                institutePriority: 'low',
+                                isVip: false
+                            });
+                        } else if (response.status === 400) {
+                            showCustomModal('خطأ', result.message, 'error');
+                        } else {
+                            showCustomModal('خطأ', 'فشل إضافة المعهد. يرجى المحاولة لاحقاً.', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error submitting form:', error);
+                        showCustomModal('خطأ في الاتصال', 'فشل الاتصال بالخادم. يرجى التحقق من اتصالك بالإنترنت.', 'error');
+                    } finally {
+                        setLoading(false);
+                    }
+                };
+
+                return (
+                    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+                        <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-200 w-full max-w-lg">
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-2xl font-bold text-[#1b2a39] font-cardo">إضافة معهد جديد</h2>
+                                <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                                    <i className="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <form onSubmit={handleSubmit} className="space-y-4 font-cairo">
+                                <div>
+                                    <label htmlFor="instituteName" className="block text-sm font-medium text-gray-700">اسم المعهد <span className="text-red-500">*</span></label>
+                                    <input type="text" id="instituteName" name="instituteName" value={formData.instituteName} onChange={handleChange} className="mt-1 p-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#15a9b2] outline-none text-right" required />
+                                </div>
+                                <div>
+                                    <label htmlFor="instituteType" className="block text-sm font-medium text-gray-700">نوع المعهد</label>
+                                    <input type="text" id="instituteType" name="instituteType" value={formData.instituteType} onChange={handleChange} className="mt-1 p-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#15a9b2] outline-none text-right" />
+                                </div>
+                                <div>
+                                    <label htmlFor="institutePriority" className="block text-sm font-medium text-gray-700">الأولوية</label>
+                                    <select id="institutePriority" name="institutePriority" value={formData.institutePriority} onChange={handleChange} className="mt-1 p-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#15a9b2] outline-none text-right">
+                                        <option value="low">منخفضة</option>
+                                        <option value="medium">متوسطة</option>
+                                        <option value="high">عالية</option>
+                                    </select>
+                                </div>
+                                <div className="flex items-center">
+                                    <input type="checkbox" id="isVip" name="isVip" checked={formData.isVip} onChange={handleChange} className="h-4 w-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500 ml-2" />
+                                    <label htmlFor="isVip" className="text-sm font-medium text-gray-700">معهد VIP</label>
+                                </div>
+                                <div className="flex justify-between items-center mt-6 space-x-2 space-x-reverse">
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="w-full bg-[#15a9b2] text-white font-bold py-3 px-4 rounded-lg hover:bg-[#0f7a81] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                    >
+                                        {loading ? (
+                                            <div className="loader ease-linear rounded-full border-2 border-t-2 border-gray-200 h-6 w-6 mx-auto"></div>
+                                        ) : (
+                                            "إضافة"
+                                        )}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={onClose}
+                                        className="w-full bg-gray-300 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+                                    >
+                                        إلغاء
+                                    </button>
+                                </div>
+                            </form>
+                            {showModal && (
+                                <CustomModal
+                                    title={message.type === 'success' ? 'نجاح' : 'خطأ'}
+                                    message={message.text}
+                                    type={message.type}
+                                    onClose={closeModal}
+                                />
+                            )}
+                        </div>
+                    </div>
+                );
+            };
+            
+            // Custom Modal component for showing success/error messages
+            const CustomModal = ({ title, message, type, onClose }) => {
+                const titleColor = type === 'success' ? 'text-green-600' : 'text-red-600';
+                const buttonColor = type === 'success' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600';
+
+                return (
+                    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+                        <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-sm">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className={`text-xl font-bold ${titleColor}`}>{title}</h3>
+                                <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                                    <i className="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <p className="text-gray-700 mb-6">{message}</p>
+                            <div className="text-left">
+                                <button
+                                    onClick={onClose}
+                                    className={`px-6 py-2 text-white rounded-lg transition-colors ${buttonColor}`}
+                                >
+                                    إغلاق
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="flex h-screen font-cairo bg-[#1b2a39]" dir="rtl">
+                    <Sidebar />
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        <header className="flex justify-between items-center p-4 bg-white border-b border-gray-200 md:hidden">
+                            <h1 className="text-xl font-bold text-[#1b2a39]">قائمة المعاهد</h1>
+                            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+                                <MenuIcon className="h-6 w-6 text-gray-600" />
+                            </button>
+                        </header>
+                        <main className="flex-1 overflow-x-hidden overflow-y-auto p-6 md:p-8">
+                            <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+                                <h1 className="text-3xl font-bold text-[#f1f2f2] font-cardo">قائمة المعاهد</h1>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setShowAddInstituteModal(true)}
+                                        className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg flex items-center transition-colors"
+                                    >
+                                        <i className="fas fa-plus ml-2"></i>إضافة معهد جديد
+                                    </button>
+                                    <button
+                                        onClick={fetchInstitutes}
+                                        className="bg-[#15a9b2] hover:bg-[#0f7a81] text-white py-2 px-4 rounded-lg flex items-center transition-colors"
+                                    >
+                                        <i className="fas fa-sync-alt ml-2"></i>تحديث البيانات
+                                    </button>
+                                </div>
+                            </div>
+
+                            {error && (
+                                <div className="bg-red-50 border-r-4 border-red-500 p-4 mb-6">
+                                    <div className="flex">
+                                        <div className="flex-shrink-0 ml-3">
+                                            <i className="fas fa-exclamation-circle text-red-500"></i>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-red-700">
+                                                خطأ في تحميل البيانات: {error}
+                                            </p>
+                                            <p className="text-sm mt-1">
+                                                تأكد من أن خادمك يعمل بشكل صحيح وأن نقطة وصول API صحيحة.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {!loading && !error && (
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                    <div className="flex flex-col md:flex-row justify-between items-end mb-6 gap-4 relative z-10">
+                                        <div className="w-full">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">تصفية حسب الأولوية</label>
+                                            <select
+                                                name="priority"
+                                                onChange={handleFilterChange}
+                                                value={filters.priority}
+                                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#15a9b2] outline-none"
+                                            >
+                                                <option value="all">كل الأولويات</option>
+                                                <option value="high">عالية</option>
+                                                <option value="medium">متوسطة</option>
+                                                <option value="low">منخفضة</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div className="w-full">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">تصفية VIP</label>
+                                            <select
+                                                name="isVip"
+                                                onChange={handleFilterChange}
+                                                value={filters.isVip}
+                                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#15a9b2] outline-none"
+                                            >
+                                                <option value="all">الكل</option>
+                                                <option value="vip">VIP</option>
+                                                <option value="not-vip">غير VIP</option>
+                                            </select>
+                                        </div>
+
+                                        <div className="w-full">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">بحث</label>
+                                            <input
+                                                type="text"
+                                                name="search"
+                                                value={filters.search}
+                                                onChange={handleSearchChange}
+                                                placeholder="ابحث بالاسم..."
+                                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#15a9b2] outline-none text-right"
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    {selectedInstitutes.length > 0 && (
+                                        <div className="w-full md:w-auto text-right mb-4">
+                                            <button
+                                                onClick={handleDownloadSelectedQrCodes}
+                                                className="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg flex items-center justify-center transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                                disabled={isDownloading}
+                                            >
+                                                {isDownloading ? (
+                                                    <div className="loader ease-linear rounded-full border-2 border-t-2 border-white h-5 w-5"></div>
+                                                ) : (
+                                                    <>
+                                                        <i className="fas fa-qrcode ml-2"></i>تنزيل QR Code للمختارين ({selectedInstitutes.length})
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm text-right text-gray-600">
+                                            <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                                                <tr>
+                                                    <th scope="col" className="p-3">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedInstitutes.length === filteredInstitutes.length && filteredInstitutes.length > 0}
+                                                            onChange={handleSelectAll}
+                                                            className="h-4 w-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
+                                                        />
+                                                    </th>
+                                                    <th scope="col" className="px-6 py-3">اسم المعهد</th>
+                                                    <th scope="col" className="px-6 py-3">النوع</th>
+                                                    <th scope="col" className="px-6 py-3">الأولوية</th>
+                                                    <th scope="col" className="px-6 py-3">VIP</th>
+                                                    <th scope="col" className="px-6 py-3">تنزيل QR Code</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {filteredInstitutes.length > 0 ? (
+                                                    filteredInstitutes.map((institute) => (
+                                                        <tr key={institute.institute_id} className="bg-white border-b hover:bg-gray-50">
+                                                            <td className="p-3">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={selectedInstitutes.includes(institute.institute_id)}
+                                                                    onChange={() => handleTableInstituteSelect(institute.institute_id)}
+                                                                    className="h-4 w-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
+                                                                />
+                                                            </td>
+                                                            <td className="px-6 py-4 font-bold text-gray-800">{institute.institute_name}</td>
+                                                            <td className="px-6 py-4">{institute.institute_type}</td>
+                                                            <td className="px-6 py-4">
+                                                                <Badge
+                                                                    text={institute.institute_priority === 'high' ? 'عالية' : institute.institute_priority === 'medium' ? 'متوسطة' : 'منخفضة'}
+                                                                    color={institute.institute_priority === 'high' ? 'bg-red-100 text-red-800' : institute.institute_priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}
+                                                                />
+                                                            </td>
+                                                            <td className="px-6 py-4">
+                                                                <Badge
+                                                                    text={institute.is_vip ? 'نعم' : 'لا'}
+                                                                    color={institute.is_vip ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}
+                                                                />
+                                                            </td>
+                                                            <td className="px-6 py-4">
+                                                                <button
+                                                                    onClick={() => handleDownloadQrCode(institute)}
+                                                                    className="text-[#15a9b2] hover:text-[#0f7a81] transition-colors"
+                                                                >
+                                                                    <i className="fas fa-qrcode ml-2"></i>تنزيل QR Code
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                                                            <i className="fas fa-inbox text-4xl mb-3 text-gray-300"></i>
+                                                            <p className="text-lg">لا يوجد معاهد تطابق المرشحات الحالية</p>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {loading && (
+                                <div className="flex items-center justify-center p-12">
+                                    <div className="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12"></div>
+                                </div>
+                            )}
+                            
+                            {showAddInstituteModal && (
+                                <AddInstituteModal 
+                                    onClose={() => setShowAddInstituteModal(false)}
+                                    onInstituteAdded={fetchInstitutes}
+                                />
+                            )}
+
+                        </main>
+                    </div>
+                </div>
+            );
+        };
+
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<App />);
+    </script>
+</body>
+
+</html>

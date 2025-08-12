@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل مرشح جديد</title>
+
+    <!-- React and Babel for JSX in browser -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts for branding -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cardo:wght@700&family=Cairo:wght@400;600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        .font-cardo {
+            font-family: 'Cardo', serif;
+        }
+
+        .font-cairo {
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background-color: #f1f2f2;
+        }
+
+        .loader {
+            border-top-color: #15a9b2;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+    </style>
+</head>
+
+<body class="bg-[#f1f2f2]" style="direction: rtl; text-align: right;">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const App = () => {
+            const [formData, setFormData] = useState({
+                firstName: '',
+                lastName: '',
+                position: '',
+                institute: '',
+                country: '',
+                phoneNumber: '',
+                email: ''
+            });
+
+            const [loading, setLoading] = useState(false);
+            const [message, setMessage] = useState({ text: '', type: '' });
+            const [showModal, setShowModal] = useState(false);
+            const [apiBaseUrl] = useState('http://localhost:3000');
+            const [showConfirmation, setShowConfirmation] = useState(true);
+            const [showCancelledMessage, setShowCancelledMessage] = useState(false);
+            const [registrationSuccess, setRegistrationSuccess] = useState(false);
+
+            // No useEffect needed here as there's no token to fetch
+
+            const handleConfirm = () => {
+                setShowConfirmation(false);
+            };
+
+            const handleCancel = () => {
+                setShowConfirmation(false);
+                setShowCancelledMessage(true);
+            };
+
+            const handleChange = (e) => {
+                const { name, value } = e.target;
+                setFormData(prev => ({ ...prev, [name]: value }));
+            };
+
+            const showCustomModal = (title, msg, type) => {
+                setMessage({ text: msg, type });
+                setShowModal(true);
+            };
+
+            const closeModal = () => {
+                setShowModal(false);
+                setMessage({ text: '', type: '' });
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+
+                // Simple client-side validation for required fields
+                const { firstName, lastName, phoneNumber, email } = formData;
+                if (!firstName || !lastName || !phoneNumber || !email) {
+                    showCustomModal('خطأ', 'الرجاء ملء جميع الحقول الإلزامية.', 'error');
+                    setLoading(false);
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${apiBaseUrl}/api/candidates`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const result = await response.json();
+
+                    if (response.status === 201) {
+                        setRegistrationSuccess(true);
+                    } else if (response.status === 409) {
+                        showCustomModal('خطأ', 'مرشح بنفس البريد الإلكتروني أو رقم الهاتف موجود بالفعل.', 'error');
+                    } else if (response.status === 400) {
+                        showCustomModal('خطأ', result.message, 'error');
+                    } else {
+                        showCustomModal('خطأ', 'فشل إضافة المرشح. يرجى المحاولة لاحقاً.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error submitting form:', error);
+                    showCustomModal('خطأ في الاتصال', 'فشل الاتصال بالخادم. يرجى التحقق من اتصالك بالإنترنت.', 'error');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // Modal component to be used inside the App component
+            const CustomModal = ({ title, message, type, onClose }) => {
+                const titleColor = type === 'success' ? 'text-green-600' : 'text-red-600';
+                const buttonColor = type === 'success' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600';
+
+                return (
+                    <div className="fixed inset-0 flex items-center justify-center z-50 modal-overlay">
+                        <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-sm">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className={`text-xl font-bold ${titleColor}`}>{title}</h3>
+                                <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                                    <i className="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <p className="text-gray-700 mb-6">{message}</p>
+                            <div className="text-left">
+                                <button
+                                    onClick={onClose}
+                                    className={`px-6 py-2 text-white rounded-lg transition-colors ${buttonColor}`}
+                                >
+                                    إغلاق
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderContent = () => {
+                if (registrationSuccess) {
+                    return (
+                        <div className="text-center p-12">
+                            <i className="fas fa-check-circle text-green-500 text-6xl mb-4"></i>
+                            <h1 className="text-2xl font-bold text-[#1b2a39] font-cardo mb-4">
+                                تم التسجيل بنجاح!
+                            </h1>
+                            <p className="text-gray-600 font-cairo">
+                                شكراً لتسجيلك. نأمل أن نراك في الحدث قريباً.
+                            </p>
+                        </div>
+                    );
+                }
+
+                if (showConfirmation) {
+                    return (
+                        <div className="text-center">
+                            <h1 className="text-2xl font-bold text-[#1b2a39] font-cardo mb-4">
+                                هل ترغب في تسجيل حضورك للحدث؟
+                            </h1>
+                            <p className="text-gray-600 font-cairo mb-8">
+                                الرجاء تأكيد حضورك للمتابعة إلى نموذج التسجيل.
+                            </p>
+                            <div className="flex justify-center space-x-4 space-x-reverse">
+                                <button
+                                    onClick={handleConfirm}
+                                    className="px-6 py-3 bg-[#15a9b2] text-white rounded-lg font-bold hover:bg-[#0f7a81] transition-colors"
+                                >
+                                    تأكيد
+                                </button>
+                                <button
+                                    onClick={handleCancel}
+                                    className="px-6 py-3 bg-gray-300 text-gray-800 rounded-lg font-bold hover:bg-gray-400 transition-colors"
+                                >
+                                    إلغاء
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }
+
+                if (showCancelledMessage) {
+                    return (
+                        <div className="text-center p-12">
+                            <h1 className="text-2xl font-bold text-[#1b2a39] font-cardo mb-4">
+                                شكراً لك.
+                            </h1>
+                            <p className="text-gray-600 font-cairo">
+                                تم إلغاء التسجيل. نأمل أن نراك في أحداثنا المستقبلية.
+                            </p>
+                        </div>
+                    );
+                }
+
+                return (
+                    <>
+                        <h1 className="text-2xl font-bold text-[#1b2a39] text-center font-cardo mb-2">تسجيل مرشح جديد</h1>
+                        <p className="text-gray-600 text-center font-cairo mb-8">الرجاء إدخال تفاصيل المرشح الجديد في النموذج أدناه.</p>
+
+                        <form onSubmit={handleSubmit} className="space-y-4 font-cairo">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">الاسم الأول <span className="text-red-500">*</span></label>
+                                    <input type="text" id="firstName" name="firstName" value={formData.firstName} onChange={handleChange} className="mt-1 p-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#15a9b2] outline-none text-right" />
+                                </div>
+                                <div>
+                                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">الاسم الأخير <span className="text-red-500">*</span></label>
+                                    <input type="text" id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} className="mt-1 p-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#15a9b2] outline-none text-right" />
+                                </div>
+                            </div>
+                            <div>
+                                <label htmlFor="email" className="block text-sm font-medium text-gray-700">البريد الإلكتروني <span className="text-red-500">*</span></label>
+                                <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} className="mt-1 p-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#15a9b2] outline-none text-right" />
+                            </div>
+                            <div>
+                                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">رقم الهاتف <span className="text-red-500">*</span></label>
+                                <input type="tel" id="phoneNumber" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} className="mt-1 p-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#15a9b2] outline-none text-right" />
+                            </div>
+                            <div>
+                                <label htmlFor="position" className="block text-sm font-medium text-gray-700">الوظيفة</label>
+                                <input type="text" id="position" name="position" value={formData.position} onChange={handleChange} className="mt-1 p-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#15a9b2] outline-none text-right" />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="institute" className="block text-sm font-medium text-gray-700">المعهد/الشركة</label>
+                                    <input type="text" id="institute" name="institute" value={formData.institute} onChange={handleChange} className="mt-1 p-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#15a9b2] outline-none text-right" />
+                                </div>
+                                <div>
+                                    <label htmlFor="country" className="block text-sm font-medium text-gray-700">البلد</label>
+                                    <input type="text" id="country" name="country" value={formData.country} onChange={handleChange} className="mt-1 p-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#15a9b2] outline-none text-right" />
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full bg-[#15a9b2] text-white font-bold py-3 px-4 rounded-lg hover:bg-[#0f7a81] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            >
+                                {loading ? (
+                                    <div className="loader ease-linear rounded-full border-2 border-t-2 border-gray-200 h-6 w-6 mx-auto"></div>
+                                ) : (
+                                    "تسجيل"
+                                )}
+                            </button>
+                        </form>
+                    </>
+                );
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center p-4">
+                    <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-200 w-full max-w-lg">
+                        <div className="w-45 mb-6 justify-center mx-auto">
+                            <div className="rounded-xl w-full h-full flex items-center justify-center text-gray-500 text-sm">
+                                <img src="images/ICCD-Logo-02.png" alt="ICCD Logo" className="w-full h-auto rounded-xl object-contain" />
+                            </div>
+                        </div>
+                        {renderContent()}
+                    </div>
+                    {showModal && (
+                        <CustomModal
+                            title={message.type === 'success' ? 'نجاح' : 'خطأ'}
+                            message={message.text}
+                            type={message.type}
+                            onClose={closeModal}
+                        />
+                    )}
+                </div>
+            );
+        };
+
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<App />);
+    </script>
+</body>
+
+</html>

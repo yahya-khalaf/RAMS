@@ -87,6 +87,7 @@ async function sendInvitations(req, res) {
 
     const successfulRecipients = [];
     const failedRecipients = [];
+    // NEW: Use the BACKEND_BASE_URL environment variable to construct dynamic links
     const backendBaseUrl = `${process.env.BACKEND_BASE_URL || 'http://localhost:3000'}/api/invitations`;
 
     try {

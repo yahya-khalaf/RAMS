@@ -34,35 +34,37 @@ async function updateCandidateState(req, res) {
  * Inserts a single candidate into the database.
  * @param {Object} req The Express request object.
  * @param {Object} res The Express response object.
- */async function createCandidate(req, res) {
-        const { firstName, lastName, position, institute, country, phoneNumber, email, instituteId } = req.body;
+ */
+async function createCandidate(req, res) {
+    const { firstName, lastName, position, institute, country, phoneNumber, email, instituteId } = req.body;
 
-        if (!firstName || !lastName || !phoneNumber || !email) {
-            return res.status(400).json({ status: 'ERROR', message: 'Missing required fields: firstName, lastName, phoneNumber, and email.' });
-        }
-
-        try {
-            const queryText = instituteId ? db.INSERT_SINGLE_CANDIDATE_WITH_INSTITUTE_QUERY : db.INSERT_SINGLE_CANDIDATE_QUERY;
-            const values = instituteId
-                ? [firstName, lastName, position, institute, country, phoneNumber, email, instituteId]
-                : [firstName, lastName, position, institute, country, phoneNumber, email];
-
-            const result = await db.query(queryText, values);
-
-            if (result.rowCount === 0) {
-                return res.status(409).json({ status: 'ERROR', message: 'Candidate with this email or phone number already exists.' });
-            }
-
-            const newCandidate = result.rows[0];
-            res.status(201).json({ status: 'SUCCESS', message: 'Candidate created successfully.', data: newCandidate });
-
-        } catch (error) {
-            console.error('Database insertion error:', error);
-            res.status(500).json({ status: 'ERROR', message: 'Internal server error.' });
-        }
+    if (!firstName || !lastName || !phoneNumber || !email) {
+        return res.status(400).json({ status: 'ERROR', message: 'Missing required fields: firstName, lastName, phoneNumber, and email.' });
     }
+
+    try {
+        const queryText = instituteId ? db.INSERT_SINGLE_CANDIDATE_WITH_INSTITUTE_QUERY : db.INSERT_SINGLE_CANDIDATE_QUERY;
+        const values = instituteId
+            ? [firstName, lastName, position, institute, country, phoneNumber, email, instituteId]
+            : [firstName, lastName, position, institute, country, phoneNumber, email];
+
+        const result = await db.query(queryText, values);
+
+        if (result.rowCount === 0) {
+            return res.status(409).json({ status: 'ERROR', message: 'Candidate with this email or phone number already exists.' });
+        }
+
+        const newCandidate = result.rows[0];
+        res.status(201).json({ status: 'SUCCESS', message: 'Candidate created successfully.', data: newCandidate });
+
+    } catch (error) {
+        console.error('Database insertion error:', error);
+        res.status(500).json({ status: 'ERROR', message: 'Internal server error.' });
+    }
+}
+
 /**
- * NEW: Retrieves a list of candidates with optional filters.
+ * Retrieves a list of candidates with optional filters.
  * @param {Object} req The Express request object.
  * @param {Object} res The Express response object.
  */
@@ -106,17 +108,28 @@ async function getFilteredCandidates(req, res) {
                 c.last_name,
                 c.phone_number,
                 c.email,
+                c.institute,
+                ii.institute_name as custom_institute_name,
                 ei.invitation_id,
                 ei.state,
                 ei.invitations_sent
             FROM candidates c
             LEFT JOIN event_invitations ei ON c.candidate_id = ei.candidate_id
+            LEFT JOIN invited_institutes ii ON c.institute_id = ii.institute_id
             ${whereClause}
             ORDER BY c.created_at DESC;
         `;
         
         const result = await db.query(queryText, values);
-        res.status(200).json({ status: 'SUCCESS', data: result.rows });
+        
+        // Map the result to use the custom institute name if available
+        const finalData = result.rows.map(row => ({
+            ...row,
+            // Use the custom institute name if available, otherwise use the regular one
+            institute: row.custom_institute_name || row.institute
+        }));
+        
+        res.status(200).json({ status: 'SUCCESS', data: finalData });
 
     } catch (error) {
         console.error('Database retrieval error:', error);
@@ -128,5 +141,5 @@ async function getFilteredCandidates(req, res) {
 module.exports = {
     updateCandidateState,
     createCandidate,
-    getFilteredCandidates 
+    getFilteredCandidates // Export the new function
 };

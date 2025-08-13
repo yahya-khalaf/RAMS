@@ -212,7 +212,7 @@
                         <img src="images/ICCD-Logo-01.png" alt="ICCD Logo" className="h-auto object-contain p-4" />
                     </div>
                     <nav className="font-cairo space-y-2">
-                        <a href="/dashboard" className="flex items-center p-3 hover:bg-gray-200 rounded-lg">لوحة التحكم</a>
+                        <a href="/" className="flex items-center p-3 hover:bg-gray-200 rounded-lg">لوحة التحكم</a>
                         <a href="/institutes" className="flex items-center p-3 bg-[#15a9b2] text-white rounded-lg">قائمة المؤسسات</a>
                     </nav>
                 </aside>
@@ -257,7 +257,7 @@
                     setLoading(true);
 
                     if (!formData.instituteName) {
-                        showCustomModal('خطأ', 'الرجاء إدخال اسم المعهد.', 'error');
+                        showCustomModal('خطأ', 'الرجاء إدخال اسم المؤسسة.', 'error');
                         setLoading(false);
                         return;
                     }
@@ -272,7 +272,7 @@
                         const result = await response.json();
 
                         if (response.status === 201) {
-                            showCustomModal('تم بنجاح', 'تمت إضافة المعهد بنجاح.', 'success');
+                            showCustomModal('تم بنجاح', 'تمت إضافة المؤسسة بنجاح.', 'success');
                             setFormData({
                                 instituteName: '',
                                 instituteType: '',
@@ -282,7 +282,7 @@
                         } else if (response.status === 400) {
                             showCustomModal('خطأ', result.message, 'error');
                         } else {
-                            showCustomModal('خطأ', 'فشل إضافة المعهد. يرجى المحاولة لاحقاً.', 'error');
+                            showCustomModal('خطأ', 'فشل إضافة المؤسسة. يرجى المحاولة لاحقاً.', 'error');
                         }
                     } catch (error) {
                         console.error('Error submitting form:', error);
@@ -296,18 +296,18 @@
                     <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
                         <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-200 w-full max-w-lg">
                             <div className="flex justify-between items-center mb-4">
-                                <h2 className="text-2xl font-bold text-[#1b2a39] font-cardo">إضافة معهد جديد</h2>
+                                <h2 className="text-2xl font-bold text-[#1b2a39] font-cardo">إضافة مؤسسة جديد</h2>
                                 <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
                                     <i className="fas fa-times"></i>
                                 </button>
                             </div>
                             <form onSubmit={handleSubmit} className="space-y-4 font-cairo">
                                 <div>
-                                    <label htmlFor="instituteName" className="block text-sm font-medium text-gray-700">اسم المعهد <span className="text-red-500">*</span></label>
+                                    <label htmlFor="instituteName" className="block text-sm font-medium text-gray-700">اسم المؤسسة <span className="text-red-500">*</span></label>
                                     <input type="text" id="instituteName" name="instituteName" value={formData.instituteName} onChange={handleChange} className="mt-1 p-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#15a9b2] outline-none text-right" required />
                                 </div>
                                 <div>
-                                    <label htmlFor="instituteType" className="block text-sm font-medium text-gray-700">نوع المعهد</label>
+                                    <label htmlFor="instituteType" className="block text-sm font-medium text-gray-700">نوع المؤسسة</label>
                                     <input type="text" id="instituteType" name="instituteType" value={formData.instituteType} onChange={handleChange} className="mt-1 p-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#15a9b2] outline-none text-right" />
                                 </div>
                                 <div>
@@ -320,7 +320,7 @@
                                 </div>
                                 <div className="flex items-center">
                                     <input type="checkbox" id="isVip" name="isVip" checked={formData.isVip} onChange={handleChange} className="h-4 w-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500 ml-2" />
-                                    <label htmlFor="isVip" className="text-sm font-medium text-gray-700">معهد VIP</label>
+                                    <label htmlFor="isVip" className="text-sm font-medium text-gray-700">مؤسسة VIP</label>
                                 </div>
                                 <div className="flex justify-between items-center mt-6 space-x-2 space-x-reverse">
                                     <button
@@ -402,7 +402,7 @@
                                         onClick={() => setShowAddInstituteModal(true)}
                                         className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg flex items-center transition-colors"
                                     >
-                                        <i className="fas fa-plus ml-2"></i>إضافة معهد جديد
+                                        <i className="fas fa-plus ml-2"></i>إضافة مؤسسة جديد
                                     </button>
                                     <button
                                         onClick={fetchInstitutes}
@@ -506,7 +506,7 @@
                                                             className="h-4 w-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
                                                         />
                                                     </th>
-                                                    <th scope="col" className="px-6 py-3">اسم المعهد</th>
+                                                    <th scope="col" className="px-6 py-3">اسم المؤسسة</th>
                                                     <th scope="col" className="px-6 py-3">النوع</th>
                                                     <th scope="col" className="px-6 py-3">الأولوية</th>
                                                     <th scope="col" className="px-6 py-3">VIP</th>

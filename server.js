@@ -41,7 +41,7 @@ app.use(express.static(frontendPath));
 
 // Server-side routes for your frontend pages.
 // These routes handle clean URLs by serving the correct HTML file.
-app.get('/dashboard', (req, res) => {
+app.get('/', (req, res) => {
     res.sendFile(path.join(frontendPath, 'dashboard.html'));
 });
 
@@ -58,9 +58,9 @@ app.get('/custom-register', (req, res) => {
 });
 
 // A simple health check route
-app.get('/', (req, res) => {
-    res.send('Welcome to the RAMS backend API!');
-});
+// app.get('/', (req, res) => {
+//     res.send('Welcome to the RAMS backend API!');
+// });
 
 // Start the server and connect to the database
 async function startServer() {

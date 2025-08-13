@@ -576,8 +576,8 @@
                                                                 className="h-4 w-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
                                                             />
                                                         </th>
-                                                        <th scope="col" className="px-6 py-3">الاسم والمؤسسة</th>
-                                                        <th scope="col" className="px-6 py-3">الوظيفة</th>
+                                                        <th scope="col" className="px-6 py-3">الاسم</th>
+                                                        <th scope="col" className="px-6 py-3">المؤسسة</th>
                                                         <th scope="col" className="px-6 py-3">التواصل</th>
                                                         <th scope="col" className="px-6 py-3">الحالة</th>
                                                     </tr>
@@ -599,6 +599,7 @@
                                                                 </td>
                                                                 <td className="px-6 py-4">
                                                                     <div>{candidate.institute || ''}</div>
+                                                                     <div>{candidate.position || ''}</div>
                                                                     <div className="text-xs text-gray-500">{candidate.country || ''}</div>
                                                                 </td>
                                                                 <td className="px-6 py-4">

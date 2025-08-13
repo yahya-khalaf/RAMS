@@ -16,13 +16,13 @@ const invitationRoutes = require('./routes/invitationRoutes');
 const instituteRoutes = require('./routes/instituteRoutes');
 
 // Middleware to enable CORS for the frontend origin
-// const corsOptions = {
-//     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-//     optionsSuccessStatus: 200
-// };
+const corsOptions = {
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    optionsSuccessStatus: 200
+};
 
-// app.use(cors(corsOptions));
-app.use(cors('*'));
+app.use(cors(corsOptions));
+// app.use(cors('*'));
 // Middleware to parse JSON bodies from requests
 app.use(express.json());
 

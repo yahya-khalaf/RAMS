@@ -21,6 +21,7 @@ const corsOptions = {
     optionsSuccessStatus: 200
 };
 
+app.use(cors(corsOptions));
 // Middleware to parse JSON bodies from requests
 app.use(express.json());
 
@@ -30,9 +31,8 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/invitations', invitationRoutes);
 app.use('/api/institutes', instituteRoutes);
 
-// Define the root directory for your frontend files.
-// This is critical for deployments to find your static assets.
-const frontendPath = path.join(__dirname, '../rams-frontend/public');
+// Correct the root directory path for your frontend files.
+const frontendPath = path.join(__dirname, './rams-frontend/public');
 
 // Explicitly serve static files from the frontend directory.
 // This handles all assets like images, CSS, and JS files.
